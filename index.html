@@ -26,118 +26,101 @@
         .newsletter-header {
             margin-bottom: 20px;
             border-bottom: 2px solid #eee;
-            padding-bottom: 20px;
+            padding-bottom: 10px;
         }
 
         .newsletter-title {
             font-size: 24px;
-            font-weight: bold;
             margin: 0;
             color: #1a1a1a;
         }
 
-        .newsletter-meta {
+        .newsletter-date {
             color: #666;
             font-size: 14px;
-            margin-top: 10px;
+        }
+
+        .newsletter-content {
+            font-size: 16px;
         }
 
         .newsletter-content img {
             max-width: 100%;
             height: auto;
             border-radius: 4px;
-            margin: 20px 0;
-        }
-
-        .newsletter-content h1, 
-        .newsletter-content h2 {
-            color: #1a1a1a;
-            margin-top: 30px;
-        }
-
-        .newsletter-content p {
-            margin: 15px 0;
-        }
-
-        .newsletter-content hr {
-            border: none;
-            border-top: 1px solid #eee;
-            margin: 30px 0;
-        }
-
-        .button {
-            display: inline-block;
-            padding: 10px 20px;
-            background: #08c13f;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            font-weight: bold;
             margin: 10px 0;
         }
 
-        .button.dark {
-            background: #000;
+        .newsletter-content a {
+            color: #0066cc;
+            text-decoration: none;
         }
 
-        .quote {
-            font-style: italic;
-            border-left: 4px solid #08c13f;
-            padding-left: 20px;
-            margin: 20px 0;
+        .newsletter-content a:hover {
+            text-decoration: underline;
         }
 
-        @media (max-width: 600px) {
-            body {
-                padding: 10px;
-            }
-            
-            .newsletter-container {
-                padding: 15px;
-            }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            font-size: 18px;
+            color: #666;
         }
     </style>
 </head>
 <body>
-    <div id="newsletters"></div>
+    <div id="app">
+        <div class="loading">Loading newsletters...</div>
+    </div>
 
     <script>
-        async function loadNewsletters() {
+        async function fetchNewsletters() {
             try {
                 const response = await fetch('broadcasts_page_1.json');
                 const data = await response.json();
-                const newslettersContainer = document.getElementById('newsletters');
                 
-                data.broadcasts.forEach(newsletter => {
-                    const date = new Date(newsletter.created_at);
-                    const formattedDate = date.toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                    });
+                
+                const uniqueBroadcasts = data.broadcasts.filter((broadcast, index, self) => {
+                
+                    const firstWithSubject = self.findIndex(b => 
+                        b.subject.trim().toLowerCase() === broadcast.subject.trim().toLowerCase()
+                    );
+                    
+                
+                    return index === firstWithSubject;
+                });
 
-                    const newsletterElement = document.createElement('div');
-                    newsletterElement.className = 'newsletter-container';
-                    newsletterElement.innerHTML = `
+                
+                uniqueBroadcasts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+                const app = document.getElementById('app');
+                app.innerHTML = uniqueBroadcasts.map(broadcast => `
+                    <div class="newsletter-container">
                         <div class="newsletter-header">
-                            <h2 class="newsletter-title">${newsletter.subject}</h2>
-                            <div class="newsletter-meta">
-                                <span>Published: ${formattedDate}</span>
-                            </div>
+                            <h2 class="newsletter-title">${broadcast.subject}</h2>
+                            <div class="newsletter-date">${new Date(broadcast.created_at).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                            })}</div>
                         </div>
                         <div class="newsletter-content">
-                            ${newsletter.content}
+                            ${broadcast.content}
                         </div>
-                    `;
-                    newslettersContainer.appendChild(newsletterElement);
-                });
+                    </div>
+                `).join('');
             } catch (error) {
-                console.error('Error loading newsletters:', error);
-                document.getElementById('newsletters').innerHTML = '<p>Error loading newsletters. Please try again later.</p>';
+                console.error('Error fetching newsletters:', error);
+                document.getElementById('app').innerHTML = `
+                    <div class="newsletter-container">
+                        <p>Error loading newsletters. Please try again later.</p>
+                    </div>
+                `;
             }
         }
 
-        window.addEventListener('load', loadNewsletters);
+        // Load newsletters when the page loads
+        window.addEventListener('load', fetchNewsletters);
     </script>
 </body>
 </html> 
